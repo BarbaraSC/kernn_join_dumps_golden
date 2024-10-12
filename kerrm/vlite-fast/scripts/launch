@@ -1,0 +1,13 @@
+#!/bin/bash
+#set -x
+PACKAGE_DIR=/home/vlite-master/mtk
+conf="../config/hosts"
+grep -v "^#" < ${conf} | while read LINE
+do
+echo ${LINE}
+toks=( $LINE )
+ssh vliteops@${toks[0]} "nohup ${PACKAGE_DIR}/vlite-fast/scripts/start_single ${LINE} < /dev/null &> /dev/null" < /dev/null &> /dev/null
+done
+sleep 5
+${PACKAGE_DIR}/bin/messenger ${conf}
+

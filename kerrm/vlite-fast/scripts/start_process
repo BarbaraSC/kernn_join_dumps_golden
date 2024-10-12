@@ -1,0 +1,60 @@
+#!/bin/bash
+PACKAGE_DIR=/home/vlite-master/mtk
+#PACKAGE_DIR=/home/vlite-master/surya
+#PACKAGE_DIR=${VLITE_PACKAGE_DIR}
+set -x
+# arguments should be
+# $1 = reader port
+# $2 = baseband dada key 
+# $3 = filterbank dada key 
+# $4 = coadder dada key 
+# $5 = write_fb
+# $6 = nbit
+# $7 = gpu_id
+
+if [ ${4} -gt 0 ]
+then
+  let buffsz=655360*8*${6}
+  # 65536 is one second per bit
+  # 8 is the bufflen we want (s)
+  ${PACKAGE_DIR}/vlite-fast/scripts/start_dada2 ${4} ${buffsz} 8 
+  /home/vlite-master/surya/asgard/bin/agtriggerhook  -k ${4} -N 8 -b ${6} -s ${buffsz} &
+  #${PACKAGE_DIR}/vlite-fast/scripts/start_dada ${4} 5242880 32
+  #${PACKAGE_DIR}/vlite-fast/scripts/start_dada ${4} 1310720 128 
+  #${PACKAGE_DIR}/vlite-fast/scripts/start_dada ${4}  2621440 32
+  # if Coadder key is non zero run start_coadder
+ # ${PACKAGE_DIR}/vlite-fast/scripts/start_coadd 60 10485760 ${5} 
+ echo "Should have called start_coadd"
+fi
+
+# start nvidia-smi logging if not already
+# MTK 12/17/2018 -- disable nvidia-smi logging for now
+#if [ ! $(pgrep -x nvidia-smi) ]
+#then
+#  nvidia-smi -f ${PACKAGE_DIR}/logs/nvidia-smi_log_$(hostname).asc -l 2 &
+#  NVIDIA_SMI_PID=$!
+#else
+#  NVIDIA_SMI_PID=0
+#fi
+#echo "NVIDIA_SMI_PID=${NVIDIA_SMI_PID}"
+
+# "i" is inject FRB
+#${PACKAGE_DIR}/bin/process_baseband -k ${2} -K ${3} -w ${4} -b ${5} -g ${6} -o -i 
+# this will only write kurtosis
+#${PACKAGE_DIR}/bin/process_baseband -k ${2} -K ${3} -w ${4} -b ${5} -g ${6} -o -r 1
+# this will only write non-kurtosis
+#${PACKAGE_DIR}/bin/process_baseband -k ${2} -K ${3} -w ${4} -b ${5} -g ${6} -o -r 0
+# this will write both
+#${PACKAGE_DIR}/bin/process_baseband -k ${2} -K ${3} -w ${4} -b ${5} -g ${6} -o 
+# this will write coadd
+${PACKAGE_DIR}/bin/process_baseband -k ${2} -K ${3} -w ${5} -b ${6} -g ${7} -o -C ${4}
+
+if [ ${4} -gt 0 ]
+then
+  /mnt/ssd/bin/dada_db -k ${4} -d
+fi
+
+#if [ $NVIDIA_SMI_PID -gt 0 ]
+#then
+#  kill $NVIDIA_SMI_PID
+#fi
